@@ -42,7 +42,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private float m_NextStep;
         private bool m_Jumping;
         private bool m_Crouching = false;
-        private bool m_StopMoving;
+        private bool m_StopMoving = false;
         private AudioSource m_AudioSource;
 
         //Code added by Joshua
@@ -52,7 +52,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
         bool m_LookingRight = false;
         bool m_DirectionChanged = false;
         float m_OldHeight;
-
+        int m_OldFixedPlayerSpeed = 0;
 
         //Make sure you attach a Rigidbody in the Inspector of this GameObject
         Rigidbody m_Rigidbody;
@@ -64,6 +64,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private void Start()
         {
             m_CharacterController = GetComponent<CharacterController>();
+            m_OldFixedPlayerSpeed = m_FixedPlayerSpeed;
             m_Camera = Camera.main;
             m_OriginalCameraPosition = m_Camera.transform.localPosition;
             m_FovKick.Setup(m_Camera);
@@ -119,12 +120,12 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
             m_PreviouslyGrounded = m_CharacterController.isGrounded;
 
-            if (Input.GetKeyDown("w"))
+            if (CrossPlatformInputManager.GetButtonDown("Start"))
             {
                 m_StopMoving = true;
             }
 
-            if (Input.GetKeyDown("a"))
+            if (CrossPlatformInputManager.GetButtonDown("Left"))
             {
 
                 if (direction == Direction.right)
@@ -145,7 +146,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
             }
 
-            if (Input.GetKeyDown("d"))
+            if (CrossPlatformInputManager.GetButtonDown("Right"))
             {
 
                 if (direction == Direction.left)
@@ -206,7 +207,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
                                m_CharacterController.height / 2f, Physics.AllLayers, QueryTriggerInteraction.Ignore);
             desiredMove = Vector3.ProjectOnPlane(desiredMove, hitInfo.normal).normalized;
 
-            if (!m_StopMoving)
+            if (m_StopMoving)
             {
                 //added by Joshua
                 if (direction == Direction.right)
@@ -242,11 +243,13 @@ namespace UnityStandardAssets.Characters.FirstPerson
                     if (m_Crouch)
                     {
                         m_CharacterController.height = 0.5f;
+                        m_FixedPlayerSpeed = 5; 
                         transform.position = new Vector3(transform.position.x, transform.position.y - 0.5f, transform.position.z);
                     }
                     else
                     {
                         m_CharacterController.height = 2.0f;
+                        m_FixedPlayerSpeed = m_OldFixedPlayerSpeed;
                         transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z);
                     }
 
