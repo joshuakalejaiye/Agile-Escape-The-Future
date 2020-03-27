@@ -30,6 +30,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
         private Camera m_Camera;
         private bool m_Jump;
+        private bool m_Crouch = false;
         private float m_YRotation;
         private Vector2 m_Input;
         private Vector3 m_MoveDir = Vector3.zero;
@@ -40,6 +41,8 @@ namespace UnityStandardAssets.Characters.FirstPerson
         private float m_StepCycle;
         private float m_NextStep;
         private bool m_Jumping;
+        private bool m_Crouching = false;
+        private bool m_StopMoving;
         private AudioSource m_AudioSource;
 
         //Code added by Joshua
@@ -48,9 +51,13 @@ namespace UnityStandardAssets.Characters.FirstPerson
         bool m_LookingLeft = false;
         bool m_LookingRight = false;
         bool m_DirectionChanged = false;
+        float m_OldHeight;
+
+
         //Make sure you attach a Rigidbody in the Inspector of this GameObject
         Rigidbody m_Rigidbody;
         Vector3 m_EulerAngleVelocity;
+        
         enum Direction { forward = 0, left = -1, right = 1 };
         Direction direction = Direction.forward;
         // Use this for initialization
@@ -66,7 +73,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
             m_Jumping = false;
             m_AudioSource = GetComponent<AudioSource>();
             m_MouseLook.Init(transform, m_Camera.transform);
-
+            
             //Set the axis the Rigidbody rotates in (100 in the y axis)
             m_EulerAngleVelocity = new Vector3(0, -90, 0);
 
@@ -78,11 +85,25 @@ namespace UnityStandardAssets.Characters.FirstPerson
         // Update is called once per frame
         private void Update()
         {
+
+
             // the jump state needs to read here to make sure it is not missed
             if (!m_Jump)
             {
                 m_Jump = CrossPlatformInputManager.GetButtonDown("Jump");
+                if (CrossPlatformInputManager.GetButtonDown("Crouch"))
+                { 
+                    if (m_Crouch)
+                    {
+                        m_Crouch = false;
+                    }
+                    else
+                    {
+                        m_Crouch = true;
+                    }
+                }
             }
+
 
             if (!m_PreviouslyGrounded && m_CharacterController.isGrounded)
             {
@@ -100,7 +121,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
             if (Input.GetKeyDown("w"))
             {
-                m_MovingForward = !m_MovingForward;
+                m_StopMoving = true;
             }
 
             if (Input.GetKeyDown("a"))
@@ -123,7 +144,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
                 }
 
             }
-
 
             if (Input.GetKeyDown("d"))
             {
@@ -186,51 +206,66 @@ namespace UnityStandardAssets.Characters.FirstPerson
                                m_CharacterController.height / 2f, Physics.AllLayers, QueryTriggerInteraction.Ignore);
             desiredMove = Vector3.ProjectOnPlane(desiredMove, hitInfo.normal).normalized;
 
-
-            //added by Joshua
-            if (direction == Direction.right)
+            if (!m_StopMoving)
             {
-                m_MoveDir.x = m_FixedPlayerSpeed;
-                m_MoveDir.z = 0;
-            }
-
-            if (direction == Direction.left)
-            {
-                m_MoveDir.x = -m_FixedPlayerSpeed;
-                m_MoveDir.z = 0;
-            }
-
-            if (direction == Direction.forward)
-            {
-                m_MoveDir.x = 0;
-                m_MoveDir.z = m_FixedPlayerSpeed;
-            }
-
-            if (m_CharacterController.isGrounded)
-            {
-                m_MoveDir.y = -m_StickToGroundForce;
-
-                if (m_Jump)
+                //added by Joshua
+                if (direction == Direction.right)
                 {
-                    m_MoveDir.y = m_JumpSpeed;
-                    PlayJumpSound();
-                    m_Jump = false;
-                    m_Jumping = true;
+                    m_MoveDir.x = m_FixedPlayerSpeed;
+                    m_MoveDir.z = 0;
+                }
+
+                if (direction == Direction.left)
+                {
+                    m_MoveDir.x = -m_FixedPlayerSpeed;
+                    m_MoveDir.z = 0;
+                }
+
+                if (direction == Direction.forward)
+                {
+                    m_MoveDir.x = 0;
+                    m_MoveDir.z = m_FixedPlayerSpeed;
+                }
+
+                if (m_CharacterController.isGrounded)
+                {
+                    m_MoveDir.y = -m_StickToGroundForce;
+
+                    if (m_Jump)
+                    {
+                        m_MoveDir.y = m_JumpSpeed;
+                        PlayJumpSound();
+                        m_Jump = false;
+                        m_Jumping = true;
+                    }
+
+                    if (m_Crouch)
+                    {
+                        m_CharacterController.height = 0.5f;
+                        transform.position = new Vector3(transform.position.x, transform.position.y - 0.5f, transform.position.z);
+                    }
+                    else
+                    {
+                        m_CharacterController.height = 2.0f;
+                        transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z);
+                    }
+
+                }
+                else
+                {
+                    m_MoveDir += Physics.gravity * m_GravityMultiplier * Time.fixedDeltaTime;
+                }
+
+                m_CollisionFlags = m_CharacterController.Move(m_MoveDir * Time.fixedDeltaTime);
+
+                ProgressStepCycle(speed);
+                UpdateCameraPosition(speed);
+
+                m_MouseLook.UpdateCursorLock();
+                    
+
                 }
             }
-            else
-            {
-                m_MoveDir += Physics.gravity * m_GravityMultiplier * Time.fixedDeltaTime;
-            }
-           
-            m_CollisionFlags = m_CharacterController.Move(m_MoveDir * Time.fixedDeltaTime);
-
-            ProgressStepCycle(speed);
-            UpdateCameraPosition(speed);
-
-            m_MouseLook.UpdateCursorLock();
-        }
-
 
         private void PlayJumpSound()
         {
