@@ -74,7 +74,8 @@ namespace UnityStandardAssets.Characters.FirstPerson
             m_Jumping = false;
             m_AudioSource = GetComponent<AudioSource>();
             m_MouseLook.Init(transform, m_Camera.transform);
-            
+            m_MouseLook.SetCursorLock(false);
+
             //Set the axis the Rigidbody rotates in (100 in the y axis)
             m_EulerAngleVelocity = new Vector3(0, -90, 0);
 
@@ -82,6 +83,43 @@ namespace UnityStandardAssets.Characters.FirstPerson
             m_Rigidbody = GetComponent<Rigidbody>();
         }
 
+        public void GoLeft()
+        {
+            if (direction == Direction.right)
+            {
+                m_MouseLook.LookLeft(transform, m_Camera.transform);
+                direction = Direction.forward;
+                m_LookingLeft = true;
+            }
+            else if (direction == Direction.left)
+            {
+                //do nothing
+            }
+            else
+            {
+                m_MouseLook.LookLeft(transform, m_Camera.transform);
+                direction = Direction.left;
+            }
+        }
+
+        public void GoRight()
+        {
+            if (direction == Direction.left)
+            {
+                m_MouseLook.LookRight(transform, m_Camera.transform);
+                direction = Direction.forward;
+            }
+            else if (direction == Direction.right)
+            {
+                //do nothing
+            }
+            else
+            {
+                m_MouseLook.LookRight(transform, m_Camera.transform);
+                m_LookingRight = true;
+                direction = Direction.right;
+            }
+        }
 
         // Update is called once per frame
         private void Update()
@@ -91,8 +129,8 @@ namespace UnityStandardAssets.Characters.FirstPerson
             // the jump state needs to read here to make sure it is not missed
             if (!m_Jump)
             {
-                m_Jump = CrossPlatformInputManager.GetButtonDown("Jump");
-                if (CrossPlatformInputManager.GetButtonDown("Crouch"))
+                m_Jump = CrossPlatformInputManager.GetButtonDown("Jump") && m_CharacterController.isGrounded;
+                if (CrossPlatformInputManager.GetButtonDown("Crouch") && m_CharacterController.isGrounded)
                 { 
                     if (m_Crouch)
                     {
@@ -128,43 +166,13 @@ namespace UnityStandardAssets.Characters.FirstPerson
             if (CrossPlatformInputManager.GetButtonDown("Left"))
             {
 
-                if (direction == Direction.right)
-                {
-                    m_MouseLook.LookLeft(transform, m_Camera.transform);
-                    direction = Direction.forward;
-                    m_LookingLeft = true;
-                }
-                else if (direction == Direction.left)
-                {
-                    //do nothing
-                }
-                else
-                {
-                    m_MouseLook.LookLeft(transform, m_Camera.transform);
-                    direction = Direction.left;
-                }
+                GoLeft();
 
             }
 
             if (CrossPlatformInputManager.GetButtonDown("Right"))
             {
-
-                if (direction == Direction.left)
-                {
-                    m_MouseLook.LookRight(transform, m_Camera.transform);
-                    direction = Direction.forward;
-                }
-                else if (direction == Direction.right)
-                {
-                    //do nothing
-                }
-                else
-                {
-                    m_MouseLook.LookRight(transform, m_Camera.transform);
-                    m_LookingRight = true;
-                    direction = Direction.right;
-                }
-
+                GoRight();
             }
 
 
@@ -263,9 +271,6 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
                 ProgressStepCycle(speed);
                 UpdateCameraPosition(speed);
-
-                m_MouseLook.UpdateCursorLock();
-                    
 
                 }
             }
